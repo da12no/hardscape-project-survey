@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1A1816">
+  <title>Hardscape Review Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #1A1816;
+      color: #EDE8E0;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; padding: 32px 20px 56px; }
+    .screen.active { display: flex; }
+
+    /* ── TOP BAR ── */
+    .top-bar {
+      width: 100%; max-width: 460px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 20px; margin-bottom: 22px;
+    }
+    .top-title {
+      font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #C8943A;
+    }
+    .top-badge {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #C8943A;
+      background: rgba(200,148,58,0.12);
+      border: 1px solid rgba(200,148,58,0.3);
+      border-radius: 8px; padding: 5px 12px;
+    }
+
+    /* ── QR CARD ── */
+    .qr-card {
+      width: 100%; max-width: 460px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px; padding: 22px;
+      display: flex; flex-direction: column; align-items: center;
+      margin-bottom: 16px;
+    }
+    .qr-img-wrap {
+      width: 210px; height: 210px; background: #fff;
+      border-radius: 14px; display: flex; align-items: center;
+      justify-content: center; margin-bottom: 14px; overflow: hidden;
+    }
+    .qr-img-wrap img { width: 192px; height: 192px; border-radius: 10px; }
+    .qr-biz-name  { font-size: 14px; font-weight: 700; color: #EDE8E0; text-align: center; margin-bottom: 4px; }
+    .qr-script-num { font-size: 12px; color: #5A5048; margin-bottom: 10px; }
+    .script-preview {
+      width: 100%; background: rgba(255,255,255,0.03);
+      border-radius: 10px; padding: 11px 14px;
+      font-size: 12px; color: #8A7A6E;
+      line-height: 1.6; font-style: italic; text-align: left;
+    }
+
+    /* ── REMAINING ── */
+    .remaining-bar {
+      width: 100%; max-width: 460px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .remaining-label { font-size: 12px; color: #5A5048; }
+    .remaining-count { font-size: 13px; font-weight: 700; color: #C8943A; }
+    .remaining-sub { width: 100%; max-width: 460px; font-size: 11px; color: #3A3028; margin-bottom: 12px; }
+    .progress-track {
+      width: 100%; max-width: 460px; height: 4px;
+      background: rgba(255,255,255,0.06); border-radius: 4px;
+      margin-bottom: 22px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, #9E6E28, #C8943A);
+      border-radius: 4px; transition: width 0.3s;
+    }
+
+    /* ── NEXT BTN ── */
+    .next-btn {
+      width: 100%; max-width: 460px;
+      background: linear-gradient(135deg, #9E6E28 0%, #C8943A 50%, #DBA84F 100%);
+      border: none; border-radius: 16px; padding: 20px;
+      font-size: 17px; font-weight: 900; color: #1A1816;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      cursor: pointer; font-family: inherit;
+      box-shadow: 0 6px 26px rgba(200,148,58,0.25);
+      transition: opacity 0.15s, transform 0.1s; margin-bottom: 12px;
+    }
+    .next-btn:active { opacity: 0.88; transform: scale(0.975); }
+    .next-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .warning-pill {
+      width: 100%; max-width: 460px;
+      border-radius: 12px; padding: 13px 16px;
+      font-size: 13px; text-align: center; line-height: 1.5; margin-top: 6px;
+    }
+    .warning-pill.low   { background: rgba(200,148,58,0.1); border: 1px solid rgba(200,148,58,0.25); color: #C8943A; }
+    .warning-pill.empty { background: rgba(220,50,50,0.1);  border: 1px solid rgba(220,50,50,0.25);  color: #E07070; }
+
+    /* ── REVIEW TALLY ── */
+    .got-review-btn {
+      width: 100%; max-width: 460px;
+      background: linear-gradient(135deg, #1a6b3a 0%, #22a855 100%);
+      border: none; border-radius: 16px; padding: 18px;
+      font-size: 17px; font-weight: 800; color: #fff;
+      letter-spacing: 0.03em; cursor: pointer; font-family: inherit;
+      box-shadow: 0 4px 20px rgba(34,168,85,0.22);
+      transition: opacity 0.15s, transform 0.1s; margin-top: 12px;
+    }
+    .got-review-btn:active { opacity: 0.85; transform: scale(0.975); }
+
+    .tally-section {
+      width: 100%; max-width: 460px;
+      margin-top: 16px; margin-bottom: 32px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px; padding: 18px 20px;
+    }
+    .tally-header {
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: #5A5048; margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .tally-total-badge {
+      background: rgba(34,168,85,0.15); border: 1px solid rgba(34,168,85,0.3);
+      color: #22a855; border-radius: 8px; padding: 3px 10px;
+      font-size: 12px; font-weight: 700;
+    }
+    .tally-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 12px 0; }
+    .tally-log-title { font-size: 11px; color: #3A3028; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    .tally-log-entry { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
+    .tally-log-entry .log-time { color: #3A3028; display: flex; align-items: center; gap: 8px; }
+    .tally-log-entry .log-remove { color: #3A3028; background: none; border: none; font-size: 15px; cursor: pointer; padding: 0; font-family: inherit; line-height: 1; }
+    .tally-log-entry .log-remove:active { color: #e07070; }
+    .tally-empty { font-size: 13px; color: #3A3028; text-align: center; padding: 10px 0; }
+    .tally-count-row {
+      display: flex; justify-content: center; align-items: baseline; gap: 10px;
+      padding: 8px 0 4px;
+    }
+    .tally-big-num { font-size: 48px; font-weight: 900; color: #22a855; line-height: 1; }
+    .tally-big-label { font-size: 14px; color: #5A5048; }
+  </style>
+</head>
+<body>
+
+<div class="screen active" id="main-screen">
+  <div class="top-bar">
+    <div class="top-title">Review Tracker</div>
+    <div class="top-badge">Phoenix Hardscape Pros</div>
+  </div>
+
+  <div class="qr-card">
+    <div class="qr-img-wrap"><img id="qr-img" src="" alt="QR Code"></div>
+    <div class="qr-biz-name">Phoenix Hardscape Pros - Pavers &amp; Turf</div>
+    <div class="qr-script-num" id="qr-script-num"></div>
+    <div class="script-preview" id="script-preview"></div>
+  </div>
+
+  <div class="remaining-bar">
+    <span class="remaining-label">Scripts remaining (permanent)</span>
+    <span class="remaining-count" id="remaining-count"></span>
+  </div>
+  <div class="remaining-sub">Once used, a script is retired forever - never reused on this Google listing.</div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+
+  <button class="next-btn" id="next-btn" onclick="nextCustomer()">Next Customer</button>
+  <div id="status-pill"></div>
+  <button class="got-review-btn" id="got-review-btn" onclick="logReview()">&#10003; Got a Review</button>
+  <div class="tally-section" id="tally-section"></div>
+</div>
+
+<script>
+// !! UPDATE THIS after deploying index.html to Netlify !!
+const SITE_URL = 'https://YOUR-SITE.netlify.app';
+
+const TOTAL = 200;
+const USED_KEY    = 'hp_used_v1';
+const QUEUE_KEY   = 'hp_queue_v1';
+const REVIEWS_KEY = 'hp_reviews_v1';
+const LOW_WARNING = 40;
+
+const SCRIPTS = [
+  // === PAVER PATIO (0-24) ===
+  "Had a large paver patio installed in our backyard by Phoenix Hardscape Pros. The craftsmanship is outstanding - every paver is perfectly level and the pattern we chose looks even better in person than we expected. Couldn't be happier.",
+  "Our backyard paver patio turned out incredible. Clean install, no mess left behind, and the finished product looks like it belongs in a magazine. Highly recommend for any patio paver work in the Phoenix area.",
+  "Phoenix Hardscape Pros installed a travertine patio around our back porch and it transformed the space completely. The crew was professional, on time every day, and the price matched the quote exactly.",
+  "Finally pulled the trigger on a paver patio after years of dealing with cracked concrete. The install was smooth, the crew was respectful of the yard, and the result exceeded every expectation I had.",
+  "Got a tumbled paver patio installed and the result is stunning. The natural look blends perfectly with the desert landscaping around it. Really professional work from start to finish.",
+  "Phoenix Hardscape Pros did our backyard patio pavers and the difference from the old concrete slab is night and day. Surface stays cooler in the Arizona heat too - that was a big selling point for us.",
+  "Had a large L-shaped patio installed with a fire pit area. The design process was collaborative and the execution was flawless. We use the space every evening now.",
+  "Our outdoor paver patio came out better than the 3D rendering we were shown. Really clean work, no shortcuts, and the drainage was properly addressed too.",
+  "Just had a paver patio installed and I'm already getting asked by neighbors who did it. Phoenix Hardscape Pros did the work and I'll be passing their number along. Great job.",
+  "Had our concrete patio demo'd and replaced with Arizona flagstone pavers. The visual difference is remarkable and the surface is so much better underfoot in summer.",
+  "Backyard patio pavers installed last month and the quality is clear. No lippage, perfect alignment, and the color blend we chose looks natural and cohesive.",
+  "Phoenix Hardscape Pros turned a bare dirt backyard into a proper outdoor living space with a full paver patio. The project was done ahead of schedule and the crew kept everything clean.",
+  "We had a paver patio and pergola base installed together. The coordination was seamless and both elements look like they were always meant to be there.",
+  "Travertine paver patio installed off the back of our Scottsdale home. It's elegant, practical, and handles the heat without getting uncomfortably hot underfoot. Exactly what we needed.",
+  "Had our old stamped concrete replaced with real pavers. The difference in quality and look is substantial. Stamped concrete looks cheap compared to this.",
+  "Phoenix Hardscape Pros handled our backyard patio from design through installation. The whole process was easy and the final result looks like a high-end resort.",
+  "Large rectangular patio with a sitting wall installed. The dimensions were exact and the sitting wall is perfectly level. Really solid masonry work.",
+  "Got a paver patio with a built-in barbecue island surround. Everything fit together perfectly and the material choices we made look great in the Arizona sun.",
+  "Had a paver patio installed in about four days for a pretty large space. Crew showed up on time each day and cleaned up before leaving. The result looks fantastic.",
+  "Our new paver patio is exactly what we described in the consultation. Clean lines, great material quality, and the install was professional all the way through.",
+  "Phoenix Hardscape Pros installed pavers over an existing slope with proper grading underneath. No water pooling after rains - they did the drainage right.",
+  "Had a paver patio and pathway connecting to the pool area. The continuity of material and layout looks really intentional and polished. Great design execution.",
+  "Wanted a rustic look with irregular flagstone and got exactly that. The dry-laid stone looks natural and the crew had real skill setting irregular pieces.",
+  "Had the backyard leveled and a full paver patio installed. Phoenix Hardscape Pros handled the grading and the patio installation as one project. Very efficient.",
+  "Our paver patio is the best investment we've made in this house. Phoenix Hardscape Pros delivered a premium product and the yard is now our favorite room.",
+
+  // === ARTIFICIAL TURF (25-49) ===
+  "Had artificial turf installed in the backyard and it completely changed how we use the space. No more watering, no more brown patches, and the kids are out there every day.",
+  "Phoenix Hardscape Pros installed artificial turf in both the front and back yard. The quality of the turf is impressive - it looks and feels real. Water bill is noticeably lower.",
+  "Got turf in the backyard for the dogs and it's been perfect. Easy to clean, stays green, and the dogs love it. Would absolutely recommend for pet-friendly turf in Arizona.",
+  "Had artificial turf installed to replace dead grass that couldn't survive Phoenix summers. The turf looks better than real grass ever did and requires zero maintenance.",
+  "Front yard artificial turf install completed last month. Neighbors have stopped to ask about it twice already - it looks that natural. Phoenix Hardscape Pros did a clean job.",
+  "Had synthetic turf installed around the pool area and it looks great. No more wet grass being tracked inside and the area stays cool enough to walk on barefoot.",
+  "Phoenix Hardscape Pros installed a putting green in the backyard along with artificial turf on the side yard. Both look professionally done and have held up perfectly.",
+  "Artificial turf install replaced a brown, struggling lawn that I was spending too much money trying to save. The turf looks better and hasn't needed a single thing since install.",
+  "Had turf installed with a weed barrier and infill done correctly. No lifting edges, no hot spots, just a clean green surface that holds up to the Arizona summer.",
+  "Phoenix Hardscape Pros put in our artificial grass and the transition between turf and the paver border looks really clean. The whole yard looks polished and intentional.",
+  "We got a full backyard renovation with artificial turf and paver walkways. The combination looks incredible and the yard is genuinely low maintenance now.",
+  "Had artificial turf installed in the side yard where nothing would grow. It filled in the space perfectly and the color matches the front lawn well.",
+  "Our backyard turf install looks completely real. The blade height, the infill, the seaming - all done right. This is high-quality turf installed properly.",
+  "Phoenix Hardscape Pros installed turf for our dog run and the drainage was set up correctly so it doesn't retain odors. Really thoughtful installation.",
+  "Got a custom-shaped putting green installed in the backyard. The design, contouring, and green speed are exactly what I asked for. Really well done.",
+  "Had artificial turf replace our pool surround grass. The area looks cleaner, stays drier, and the turf surface doesn't get nearly as hot as the old pavers did.",
+  "Backyard artificial turf installed in one day. The crew was efficient and the edge work around the existing landscaping was done cleanly. No raw edges anywhere.",
+  "Phoenix Hardscape Pros did a full front yard transformation with artificial turf and decorative gravel. The curb appeal went from forgettable to genuinely impressive.",
+  "Had turf installed for a kids' play area and the cushioned infill makes it safe and comfortable for them. Really glad we went with the premium infill option.",
+  "Artificial turf in the backyard has saved us hundreds in water bills since install. Phoenix Hardscape Pros recommended the right product for Arizona heat and it's held up.",
+  "Our new artificial turf looks better than the grass it replaced ever looked - even when the grass was freshly watered. Great product, great install.",
+  "Had synthetic grass installed around a play structure. The drainage underneath was done right so no puddles after rain. Really clean install all around.",
+  "Phoenix Hardscape Pros installed turf along with a border of river rock for a clean, modern look. The combination works really well and requires almost no upkeep.",
+  "Got artificial turf installed and I can't imagine going back to real grass in Arizona. No maintenance, always green, and my water usage is down dramatically.",
+  "Had turf installed in our narrow side yard that was always dirt and weeds. Phoenix Hardscape Pros made it look like it was part of the original landscaping design.",
+
+  // === POOL DECK / TRAVERTINE (50-69) ===
+  "Had travertine pavers installed around the pool and the upgrade from concrete is remarkable. Stays much cooler underfoot and looks completely different - much more upscale.",
+  "Phoenix Hardscape Pros re-did our pool deck in travertine and the transformation is one of the best things we've done to this house. Beautiful and functional.",
+  "Pool deck pavers installed - travertine with a brushed finish. The surface texture provides grip when wet and it barely absorbs heat. Perfect material choice for Arizona.",
+  "Replaced cracked and stained pool deck concrete with travertine pavers. Phoenix Hardscape Pros handled the demo and install and it looks like a completely different backyard.",
+  "Had a full pool deck overhaul with new travertine. The color we chose coordinates perfectly with the coping and the patio furniture. Really cohesive look.",
+  "Got travertine installed around the pool and spa. The work was precise around the curved edges and everything is properly sloped for drainage. Really professional installation.",
+  "Pool deck pavers installed after our old cool deck coating failed. The travertine is a permanent solution that looks a thousand times better than the coating ever did.",
+  "Phoenix Hardscape Pros installed pavers around our pool and extended them to create a full outdoor patio area. The continuity of material ties the whole backyard together.",
+  "Had travertine pool coping replaced along with the deck pavers. The matching coping and deck look seamless and the grout color we chose works perfectly.",
+  "New pool deck travertine installation - we went with a large format tile and the scale of the material makes the pool area feel more open and luxurious.",
+  "Phoenix Hardscape Pros did our pool deck in travertine and the crew was careful not to damage any of the existing pool equipment during demo. Really professional.",
+  "Had pavers installed around an irregularly shaped pool. The crew handled the curves and angles perfectly - everything fits tight and looks intentional.",
+  "Travertine pool deck installed and the surface is noticeably cooler than our neighbor's concrete. That's a big deal when you're barefoot in July in Phoenix.",
+  "Got a full pool area transformation with travertine, a new fire pit area, and a bar counter. Phoenix Hardscape Pros coordinated everything. Really cohesive project.",
+  "Pool deck paver installation was done in three days. No cracks from thermal cycling in our first summer - the joints accommodate expansion and contraction as designed.",
+  "Had travertine pavers installed around the pool and the natural stone variation in color gives it a unique look. Every section looks slightly different in the best way.",
+  "Phoenix Hardscape Pros did our pool coping and deck together. The coordination of those two elements made the overall result look polished and intentional.",
+  "Got the pool deck done in a large-format travertine pattern. Phoenix Hardscape Pros handled the entire project and the craftsmanship on the edge work is excellent.",
+  "Had a raised pool deck rebuilt with travertine. The structural work was done correctly and the finished surface is level, well-drained, and beautiful.",
+  "Phoenix Hardscape Pros installed travertine around our pool and patio as one continuous project. The way the materials flow from one space to the other is seamless.",
+
+  // === DRIVEWAY PAVERS (70-89) ===
+  "Had the driveway replaced with paver stones and the curb appeal upgrade is dramatic. Old concrete looked tired and the new pavers look like a completely different property.",
+  "Phoenix Hardscape Pros replaced our cracked concrete driveway with travertine pavers. The whole street looks at our house differently now. Really impactful upgrade.",
+  "Driveway paver installation completed and the quality is obvious. No cracking, no settling, and the edge restraints are properly installed for the long term.",
+  "Had a paver driveway and front walkway installed as one continuous project. The design ties the whole front of the house together and it looks intentional and premium.",
+  "Our concrete driveway had spider cracks and staining that no sealer could fix. Replaced it with pavers and the property looks better than the day we bought it.",
+  "Phoenix Hardscape Pros installed our driveway in a herringbone pattern and the detail work around the borders is excellent. Clean lines, perfect alignment.",
+  "Driveway pavers with a soldier course border installed. The combination of the field pattern and the border looks really polished and adds a lot to the front of the house.",
+  "Had a long driveway replaced with concrete pavers. The install was smooth despite the scale of the project and the final result looks incredible.",
+  "Replaced our plain concrete driveway with travertine pavers and the transformation is the first thing anyone notices when they pull up. Phoenix Hardscape Pros delivered.",
+  "Driveway paver installation with a color blend that complements the exterior of the house. The whole approach was thoughtful and the outcome looks great.",
+  "Had our cracked and lifting concrete replaced with paver stones. No more trips and falls, much better drainage, and it looks significantly better. Worth every penny.",
+  "Phoenix Hardscape Pros installed a large paver driveway with a circle detail at the entry. The design element elevates the whole front yard. Really impressive work.",
+  "Had the driveway done in a cobblestone style paver. The old world look fits the architecture of our home perfectly and the install quality is top notch.",
+  "Paver driveway and courtyard installed together. Phoenix Hardscape Pros extended the design from the street to the front door and it looks completely intentional.",
+  "Had a concrete driveway demolished and replaced with natural stone pavers. The natural variation in the stone makes the driveway look like it's always been there.",
+  "Driveway pavers installed and they've survived two monsoon seasons without any issues. The drainage was set up correctly and nothing has moved or settled.",
+  "Phoenix Hardscape Pros did our driveway in a large format paver that makes the property look modern and clean. Really different from the typical concrete.",
+  "Had a circular driveway installed with an inlay pattern at the center. The detail work on the transition between the arc and the field is really skilled masonry.",
+  "Paver driveway installation came in on budget and ahead of schedule. Phoenix Hardscape Pros communicated throughout and the finished product is better than I pictured.",
+  "Our new paver driveway is the envy of the block. Multiple neighbors have asked for the number. Sent it to three of them already.",
+
+  // === RETAINING WALLS (90-104) ===
+  "Had a terraced retaining wall system installed to address a slope in the backyard. Phoenix Hardscape Pros designed the solution and executed it perfectly. No more erosion.",
+  "Retaining wall installed along the back property line. The block work is level and the drainage behind the wall was installed correctly. Really solid work.",
+  "Had a large retaining wall installed to create a level patio area. Phoenix Hardscape Pros handled the grading, the wall, and the patio surface as one project.",
+  "Our drainage issues are finally solved. Phoenix Hardscape Pros installed a retaining wall and French drain system that redirects water away from the foundation.",
+  "Had a decorative retaining wall installed along the driveway. It's functional and it looks great - the cap stone detail at the top finishes it off nicely.",
+  "Retaining wall installed to hold back a slope that was washing out every monsoon. First rainy season after install and not a single problem. Well-engineered.",
+  "Had a sitting wall and retaining wall installed together. Phoenix Hardscape Pros incorporated seating into the retaining structure - really smart use of the space.",
+  "Got a boulder retaining wall installed for a natural look. The placement of the boulders looks organic and the wall has been solid through multiple rainstorms.",
+  "Retaining wall project on a difficult slope. Phoenix Hardscape Pros did the excavation, installed the wall, and backfilled correctly. First-rate structural work.",
+  "Had a raised planting bed and retaining wall built at the same time. The combination of the wall and the landscaping above it looks really finished.",
+  "Phoenix Hardscape Pros installed a stacked stone retaining wall that looks custom-built. The dry-stack technique they used gives it real visual character.",
+  "Had our retaining wall rebuilt after it failed during a monsoon. Phoenix Hardscape Pros came out, assessed it, and rebuilt it correctly with proper drainage this time.",
+  "Retaining wall installed along one side of the pool equipment area. It's practical, it hides the equipment nicely, and the material matches the rest of the hardscape.",
+  "Got a curved retaining wall installed to follow the natural topography of the yard. The execution of that curve was impressive - it looks very intentional.",
+  "Phoenix Hardscape Pros installed a low retaining wall that doubles as bench seating around a fire pit. Functional and beautiful at the same time.",
+
+  // === BACKYARD RENOVATIONS (105-119) ===
+  "Full backyard transformation - pavers, artificial turf, fire pit, and a sitting wall. Phoenix Hardscape Pros coordinated the whole project and it turned out spectacular.",
+  "Had a complete backyard renovation done. The before-and-after is honestly hard to believe. We went from a dirt lot to a finished outdoor living space.",
+  "Backyard renovation with pavers, turf, a pool deck, and a pergola base. Phoenix Hardscape Pros managed every part of the hardscape and the result is cohesive.",
+  "Our backyard went from a neglected grass lawn to a fully finished paver and turf outdoor space. The design was thoughtful and the execution was professional.",
+  "Phoenix Hardscape Pros transformed our empty desert backyard into an outdoor living room. Travertine patio, artificial turf, fire pit - it's our favorite space now.",
+  "Complete backyard makeover including pavers, synthetic turf, and a water feature base. Every element was designed to work together and it shows.",
+  "Had a full outdoor kitchen, paver patio, and turf area built. Phoenix Hardscape Pros coordinated all the hardscape and the project came out beautifully.",
+  "Backyard went from unusable desert dirt to a functional outdoor space in about two weeks. Phoenix Hardscape Pros stayed on schedule and communicated daily.",
+  "Full yard renovation - front and back. Phoenix Hardscape Pros did the pavers, turf, and sitting walls throughout. The property is transformed.",
+  "Got a backyard putting green, paver patio, and artificial turf side yard installed. The three elements feel designed as a whole rather than separate projects.",
+  "Phoenix Hardscape Pros did a full backyard overhaul. Demolished the old concrete, graded the yard, installed pavers and turf, and finished with landscape lighting prep.",
+  "Had the backyard done with travertine, a custom fire pit, and turf. The fire pit design was unique and Phoenix Hardscape Pros built it exactly as we sketched it out.",
+  "Complete hardscape renovation including pool deck, patio, walkways, and artificial turf. Phoenix Hardscape Pros ran one project and it all ties together beautifully.",
+  "Backyard transformation from start to finish in eight days. Pavers, synthetic turf, retaining walls - clean professional work throughout the whole project.",
+  "Phoenix Hardscape Pros handled a complete front and backyard hardscape redesign. The continuity of materials from front to back makes the whole property look intentional.",
+
+  // === OUTDOOR LIVING (120-134) ===
+  "Had an outdoor kitchen and paver patio installed. Phoenix Hardscape Pros built the kitchen base and countertop surround out of stone block and it's extremely well built.",
+  "Got a custom fire pit and sitting wall installed. The fire pit is round, gas-powered, and the seat wall around it is exactly the right height. Really well thought out.",
+  "Phoenix Hardscape Pros installed an outdoor kitchen, paver patio, and pergola base as one project. The integration of all three looks like it was professionally designed.",
+  "Had a raised fire pit platform installed with built-in seating. The level change adds visual interest and the built-in seating is comfortable and sturdy.",
+  "Outdoor kitchen base and countertops installed in natural stone. The quality of the masonry work is evident - it's built like it's meant to last decades.",
+  "Phoenix Hardscape Pros installed a gas fire pit with a travertine surround. The material matches the rest of the patio and the result looks completely custom.",
+  "Had a BBQ island installed with granite countertops and a paver surround. Phoenix Hardscape Pros handled all the hardscape and the result is a real entertaining space.",
+  "Got a sunken seating area with a built-in fire pit installed in the center. The level change gives the space a really distinctive feel. Unique and very well executed.",
+  "Phoenix Hardscape Pros installed a bar counter, fire pit, and paver patio as part of a full backyard project. Every element is well-proportioned and finished.",
+  "Had an outdoor fireplace and patio installed. The stone fireplace surround is the focal point of the whole backyard. Really impressive masonry work.",
+  "Got a full outdoor entertainment area - kitchen, fire pit, and paver patio. Phoenix Hardscape Pros handled every element and the space gets used every weekend.",
+  "Had a pergola base and outdoor kitchen installed on a travertine patio. The scale of the project was significant and Phoenix Hardscape Pros executed it cleanly.",
+  "Outdoor kitchen installed with a stone hood surround. The craftsmanship on the curved hood surround is really impressive - that's not easy work.",
+  "Phoenix Hardscape Pros built an outdoor bar and fire pit area that's completely changed how we entertain. The backyard gets more use than any room in the house now.",
+  "Got a fire pit conversation area installed with flagstone pavers and built-in bench seating. The informal look we wanted came out exactly right.",
+
+  // === WALKWAYS / FLAGSTONE (135-149) ===
+  "Had a flagstone walkway installed from the driveway to the front door. The natural irregular stone looks like it grew there and the installation quality is excellent.",
+  "Phoenix Hardscape Pros installed a paver walkway from the front gate through the backyard. The layout follows the natural path of movement and looks thoughtful.",
+  "Got a stepping stone path through the side yard. Phoenix Hardscape Pros set each stone with proper spacing and the path feels natural to walk on.",
+  "Flagstone patio and walkway installed together. The transition between the two is seamless and the scale of the flagstone pieces works perfectly for both applications.",
+  "Had a curved walkway installed from the street to the front door in tumbled pavers. The curve follows the natural approach to the house and it looks polished.",
+  "Phoenix Hardscape Pros installed a paver walkway and side gate area. The attention to the grade change at the gate was handled well - no tripping hazard.",
+  "Had a walkway and driveway installed as one project. The transition from the driveway material to the walkway was designed intentionally. Really professional result.",
+  "Got a flagstone path through the backyard garden area. The irregular stone pieces were selected for size and color and placed with real care. Beautiful result.",
+  "Phoenix Hardscape Pros installed a front yard walkway with a paver border on each side. The width is appropriate and the border adds a polished detail.",
+  "Had a pool deck walkway installed connecting the house to the pool equipment area. Functional, safe, and it uses the same travertine as the pool deck.",
+  "Walkway installation through a sloped side yard. Phoenix Hardscape Pros added steps at the grade change and the whole thing looks natural and safe.",
+  "Got a wide entry walkway installed from the parking area to the front door. The scale of it makes the entry feel grand. Pavers with a dark border work perfectly.",
+  "Phoenix Hardscape Pros installed a garden path with river rock alongside the flagstone. The combination of materials gives the path a real landscape design quality.",
+  "Had stepping stones and a decomposed granite path installed. The informal material choice was right for the desert landscape around it and it looks natural.",
+  "Walkway, driveway, and pool area all done in travertine. Phoenix Hardscape Pros kept the material consistent throughout and the whole property feels designed.",
+
+  // === GENERAL QUALITY / PROFESSIONALISM (150-174) ===
+  "Phoenix Hardscape Pros gave a clear detailed estimate, showed up on time, and delivered exactly what was promised. This is how a contractor is supposed to operate.",
+  "The crew from Phoenix Hardscape Pros was professional from day one. They introduced themselves, explained the work plan, and delivered on every commitment.",
+  "Had hardscape work done and the quality is clearly higher than what I've seen from other companies. These guys take pride in the craft.",
+  "The estimate was thorough and detailed - no vague line items. Phoenix Hardscape Pros knew exactly what the project required before they started.",
+  "Had a hardscape project done in Phoenix and the summer heat didn't slow the crew down at all. They started early, worked efficiently, and the quality didn't suffer.",
+  "Phoenix Hardscape Pros came recommended by a neighbor and now I understand why. When you see the work, you know you're dealing with real professionals.",
+  "The project came in exactly on budget. No surprise change orders, no upcharges at the end. Phoenix Hardscape Pros operates with real integrity.",
+  "Had pavers and turf installed and both came out at the same high level of quality. Consistent craftsmanship across different scopes of work.",
+  "Phoenix Hardscape Pros cleaned up at the end of every work day. The site was always tidy and our neighbors never had any issues. Really professional crew.",
+  "Communication throughout the project was excellent. Phoenix Hardscape Pros gave updates proactively and responded quickly when we had questions.",
+  "Had a complex hardscape project with multiple elements. Phoenix Hardscape Pros coordinated everything and the result looks designed, not just installed.",
+  "The prep work was done correctly - base compacted properly, drainage addressed, edges contained. Good hardscape starts with good prep and they got that right.",
+  "Phoenix Hardscape Pros stood behind their work. A small area settled slightly after install and they came back and fixed it immediately, no questions asked.",
+  "Had pavers installed with a proper polymeric sand joint. The sand sets firm, resists weeds, and the joints look clean. The right material installed the right way.",
+  "Phoenix Hardscape Pros did the kind of work I can recommend without hesitation. When someone asks for a paver company in Phoenix, there's only one name I give them.",
+  "The design consultation was really helpful. Phoenix Hardscape Pros brought material samples and showed how they'd work together. Made the decision easy.",
+  "Had a large project done and the crew size matched the scope of work. Wasn't waiting on a small team to work through a big job. Really well organized.",
+  "Phoenix Hardscape Pros installed a beautiful hardscape that added real value to our home. Already had a realtor tell us it's a significant equity boost.",
+  "The pavers were cut precisely wherever custom cuts were needed. No rough edges, no lippage - the fit and finish is genuinely impressive.",
+  "Had paving work done in Scottsdale and the team knew how to work in the heat efficiently. Early starts, careful material handling, great result.",
+  "Phoenix Hardscape Pros understood the design direction I was going for even when I struggled to articulate it. Really experienced professionals.",
+  "The warranty information was explained clearly. Phoenix Hardscape Pros stands behind the install and the materials. That confidence says a lot.",
+  "Had several bids and Phoenix Hardscape Pros was not the cheapest. They were the most thorough in their estimate and the most professional in their communication. Worth every penny.",
+  "Hardscape project completed in Phoenix and the result looks great six months later. No settling, no shifting, no weeds. Done right the first time.",
+  "Phoenix Hardscape Pros treated the project like it was their own home. The level of care is evident in every detail. This is what quality craftsmanship looks like.",
+
+  // === LOCATION-BASED / NO BUSINESS NAME (175-199) ===
+  "Got a paver patio installed in Phoenix and it's already become our outdoor living room. The desert evenings out there are incredible with a good patio to enjoy them.",
+  "Backyard hardscape renovation in Scottsdale - pavers, turf, fire pit, and a sitting wall. The project was managed well and every element turned out great.",
+  "Had pavers installed around the pool in Gilbert and the travertine is still comfortable to walk on at 3pm in August. That's the right material for Arizona.",
+  "Paver installation in Chandler - from estimate to completion, the experience was professional and the result is excellent. Would use them again without question.",
+  "Had artificial turf installed in Mesa and the water savings alone have made it worth it. The turf looks great and holds up to the Arizona climate perfectly.",
+  "Complete backyard hardscape in Phoenix - pavers, artificial turf, and a fire pit. The whole thing was designed and built as one cohesive project.",
+  "Travertine pool deck installed in Scottsdale. The material handles heat, looks upscale, and the install quality is excellent. Right choice for pool surround in Arizona.",
+  "Had a paver driveway installed in Tempe and the neighborhood has noticed. Multiple compliments from neighbors since the work was completed.",
+  "Artificial turf and paver walkways installed in Gilbert. The drought-tolerant approach fits the desert climate perfectly and the yard looks well designed.",
+  "Retaining wall and paver patio installed in Chandler. The drainage problem we had for years is completely resolved and the yard looks great.",
+  "Had hardscape done in Glendale and the crew was early every morning and professional all day. Finished ahead of schedule. Really well-run operation.",
+  "Paver patio and artificial turf installed in Peoria. The low-maintenance outdoor space is exactly what we wanted for the Arizona lifestyle.",
+  "Had a pool deck done in travertine in Scottsdale and the before and after is remarkable. Everything from demo to grout was done with real skill.",
+  "Backyard pavers installed in Mesa - the project took four days and the quality held through the summer monsoon season. Not a single issue.",
+  "Got a custom fire pit area and paver patio installed in Queen Creek. The outdoor living space gets used year-round now. Great investment.",
+  "Driveway pavers and front walkway installed in Surprise. The curb appeal upgrade changed the whole look of the property from the street.",
+  "Had artificial turf, pavers, and a retaining wall installed in Goodyear. The combination of elements makes the backyard feel completely finished.",
+  "Paver patio, outdoor kitchen, and turf installed in Gilbert. The project came in on time, on budget, and the result looks like a resort backyard.",
+  "Had travertine installed on the patio and pool deck in Paradise Valley. The quality of the work matches the standard of the neighborhood. Really impressive.",
+  "Backyard paver project in Chandler - the entire yard was transformed in under two weeks. Professional crew, clean site, outstanding result.",
+  "Artificial turf installation in Phoenix - the turf looks real, holds up to the heat, and the water savings are exactly what we were promised.",
+  "Paver driveway installed in North Scottsdale. The design choice and material selection advice was spot on - the result looks custom and upscale.",
+  "Had a hardscape project in Tempe and the attention to detail was evident at every stage. From base prep to final joint sealing, done correctly.",
+  "Got a backyard renovation in Mesa with pavers and artificial turf. The design consultation helped us make smart decisions and the execution was flawless.",
+  "Paver patio and fire pit installed in Arizona. The project transformed the space and the quality is holding up perfectly. Best upgrade we've made to this property.",
+];
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function loadUsed() {
+  try { const s = localStorage.getItem(USED_KEY); if (s) return new Set(JSON.parse(s)); } catch(e) {}
+  return new Set();
+}
+function saveUsed(set) { localStorage.setItem(USED_KEY, JSON.stringify([...set])); }
+
+function loadQueue() {
+  try {
+    const s = localStorage.getItem(QUEUE_KEY);
+    if (s) { const q = JSON.parse(s); if (Array.isArray(q) && q.length > 0) return q; }
+  } catch(e) {}
+  return buildQueue();
+}
+function saveQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+
+function buildQueue() {
+  const used  = loadUsed();
+  const avail = [];
+  for (let i = 0; i < TOTAL; i++) { if (!used.has(i)) avail.push(i); }
+  return shuffle(avail);
+}
+
+// ─── RENDER ────────────────────────────────────────────────────────────────
+let currentScriptIdx = null;
+
+function renderQR() {
+  if (currentScriptIdx === null) { renderExhausted(); return; }
+
+  const url    = `${SITE_URL.replace(/\/$/, '')}/?s=${currentScriptIdx}`;
+  const qrSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(url)}`;
+  const used   = loadUsed();
+  const usedCount   = used.size + 1;
+  const remaining   = TOTAL - usedCount;
+
+  document.getElementById('qr-img').src = qrSrc;
+  document.getElementById('qr-script-num').textContent = `Script used: ${usedCount} of ${TOTAL}`;
+  document.getElementById('script-preview').textContent = SCRIPTS[currentScriptIdx] || '';
+  document.getElementById('remaining-count').textContent = remaining + ' left';
+  document.getElementById('progress-fill').style.width = ((usedCount / TOTAL) * 100).toFixed(1) + '%';
+  document.getElementById('next-btn').disabled = false;
+
+  const pill = document.getElementById('status-pill');
+  if (remaining <= 0) {
+    renderExhausted();
+  } else if (remaining <= LOW_WARNING) {
+    pill.className = 'warning-pill low';
+    pill.textContent = `Only ${remaining} scripts left. Time to add more.`;
+  } else {
+    pill.className = '';
+    pill.textContent = '';
+  }
+}
+
+function renderExhausted() {
+  document.getElementById('next-btn').disabled = true;
+  document.getElementById('remaining-count').textContent = '0 left';
+  const pill = document.getElementById('status-pill');
+  pill.className = 'warning-pill empty';
+  pill.textContent = 'All 200 scripts have been used. Contact your admin to reload.';
+}
+
+function nextCustomer() {
+  const used = loadUsed();
+  if (currentScriptIdx !== null) {
+    used.add(currentScriptIdx);
+    saveUsed(used);
+  }
+
+  const used2 = loadUsed();
+  const avail = [];
+  for (let i = 0; i < TOTAL; i++) { if (!used2.has(i)) avail.push(i); }
+  if (avail.length === 0) { currentScriptIdx = null; renderExhausted(); return; }
+
+  let queue = loadQueue();
+  queue = queue.filter(i => !used2.has(i));
+  if (queue.length === 0) queue = shuffle(avail);
+  currentScriptIdx = queue.pop();
+  saveQueue(queue);
+  renderQR();
+  renderTally();
+}
+
+// ─── REVIEW TALLY ──────────────────────────────────────────────────────────
+function loadReviews() {
+  try { const s = localStorage.getItem(REVIEWS_KEY); if (s) return JSON.parse(s); } catch(e) {}
+  return [];
+}
+function saveReviews(r) { localStorage.setItem(REVIEWS_KEY, JSON.stringify(r)); }
+function todayStr() { return new Date().toLocaleDateString('en-CA'); }
+
+function removeReview(timestamp) {
+  saveReviews(loadReviews().filter(r => r.timestamp !== timestamp));
+  renderTally();
+}
+
+function logReview() {
+  const reviews = loadReviews();
+  reviews.push({ timestamp: new Date().toISOString() });
+  saveReviews(reviews);
+
+  const btn = document.getElementById('got-review-btn');
+  btn.textContent = '✓ Logged!';
+  btn.style.opacity = '0.6';
+  setTimeout(() => { btn.textContent = '✓ Got a Review'; btn.style.opacity = ''; }, 900);
+
+  renderTally();
+}
+
+function renderTally() {
+  const section = document.getElementById('tally-section');
+  const today = todayStr();
+  const todayReviews = loadReviews().filter(r => new Date(r.timestamp).toLocaleDateString('en-CA') === today);
+  const total = todayReviews.length;
+
+  let html = `<div class="tally-header"><span>Today's Reviews</span><span class="tally-total-badge">${total} today</span></div>`;
+
+  if (total === 0) {
+    html += `<div class="tally-empty">No reviews logged yet today.<br>Tap the button after each one.</div>`;
+  } else {
+    html += `<div class="tally-count-row"><span class="tally-big-num">${total}</span><span class="tally-big-label">review${total !== 1 ? 's' : ''} today</span></div>`;
+  }
+
+  const recent = [...todayReviews].reverse().slice(0, 8);
+  if (recent.length > 0) {
+    html += `<div class="tally-divider"></div><div class="tally-log-title">Recent</div>`;
+    recent.forEach(r => {
+      const t = new Date(r.timestamp);
+      const timeStr = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      html += `<div class="tally-log-entry"><span style="color:#8A7A6E;">Phoenix Hardscape Pros</span><span class="log-time">${timeStr}<button class="log-remove" onclick="removeReview('${r.timestamp}')" title="Remove">&#215;</button></span></div>`;
+    });
+  }
+
+  section.innerHTML = html;
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+(function init() {
+  let queue = loadQueue();
+  if (queue.length === 0) {
+    const used = loadUsed();
+    const avail = [];
+    for (let i = 0; i < TOTAL; i++) { if (!used.has(i)) avail.push(i); }
+    if (avail.length === 0) { renderExhausted(); renderTally(); return; }
+    queue = shuffle(avail);
+  }
+  currentScriptIdx = queue.pop();
+  saveQueue(queue);
+  renderQR();
+  renderTally();
+})();
+</script>
+</body>
+</html>
